@@ -4,7 +4,9 @@
     <acl>
         <resources>
             <resource id="Magento_Backend::admin">
-                <resource id="GardenLawn_LogViewer::log_viewer" title="Log Viewer" sortOrder="90"/>
+                <resource id="GardenLawn_LogViewer::log_viewer" title="Log Viewer" sortOrder="90">
+                    <resource id="GardenLawn_LogViewer::clear" title="Clear Log Files" sortOrder="10"/>
+                </resource>
             </resource>
         </resources>
     </acl>

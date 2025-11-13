@@ -8,9 +8,10 @@ use Magento\Framework\Exception\FileSystemException;
 try {
     $logFiles = $block->getLogFiles();
 } catch (FileSystemException $e) {
-
+    $logFiles = [];
 }
 $ajaxUrl = $block->getAjaxUrl();
+$clearUrl = $block->getClearUrl();
 
 ?>
 <table class="admin__table-secondary">
@@ -27,19 +28,26 @@ $ajaxUrl = $block->getAjaxUrl();
             <tr class="admin__table-row">
                 <td class="admin__table-td"><?= $block->escapeHtml($this->getHumanName($logFile)) ?></td>
                 <td class="admin__table-td">
-                    <a href="#" class="download-link" data-file-path="<?= $logFile ?>"
-                       target="_blank"><?= $block->escapeHtml(__('Download')) ?></a>
+                    <button type="button" class="action-default download-link" data-file-path="<?= $logFile ?>">
+                        <span><?= $block->escapeHtml(__('View Last 100 Lines')) ?></span>
+                    </button>
+                    <button type="button" class="action-default load-more-link" data-file-path="<?= $logFile ?>" style="display:none;">
+                        <span><?= $block->escapeHtml(__('Load More')) ?></span>
+                    </button>
+                    <button type="button" class="action-default clear-link" data-file-path="<?= $logFile ?>">
+                        <span><?= $block->escapeHtml(__('Clear')) ?></span>
+                    </button>
                 </td>
                 <td class="admin__table-td">
                     <label>
-                        <textarea rows="1" style="width: 100%"></textarea>
+                        <textarea rows="1" style="width: 100%; min-height: 100px;"></textarea>
                     </label>
                 </td>
             </tr>
         <?php endforeach; ?>
     <?php else : ?>
         <tr class="admin__table-row">
-            <td colspan="2" class="admin__table-td"><?= $block->escapeHtml(__('No log files found.')) ?></td>
+            <td colspan="3" class="admin__table-td"><?= $block->escapeHtml(__('No log files found.')) ?></td>
         </tr>
     <?php endif; ?>
     </tbody>
@@ -89,28 +97,100 @@ $ajaxUrl = $block->getAjaxUrl();
 <script>
     require([
         'jquery',
-    ], function ($) {
+        'Magento_Ui/js/modal/confirm',
+        'mage/translate'
+    ], function ($, confirm, $t) {
         $(document).ready(function () {
+            const defaultLines = 100;
+
             // Trigger file download via AJAX
             $('body').on('click', '.download-link', function (e) {
                 e.preventDefault();
                 const filePath = $(this).attr('data-file-path');
                 let textArea = $(this).parents('tr').find('textarea').first();
+                let loadMoreButton = $(this).parents('tr').find('.load-more-link').first();
+
+                // Reset lines loaded for this file
+                $(this).data('lines-loaded', defaultLines);
 
                 $.ajax({
                     url: '<?= $ajaxUrl ?>',
                     type: 'post',
-                    data: {file_path: filePath},
+                    data: {file_path: filePath, lines: defaultLines},
+                    showLoader: true,
                     success: function (response) {
                         textArea.val(response);
                         textArea.prop('rows', 15);
+                        loadMoreButton.show();
                     },
                     error: function (xhr, status, error) {
                         console.error('Error downloading file: ' + error);
+                        textArea.val('Error: ' + xhr.responseText);
+                        loadMoreButton.hide();
                     }
                 });
-            })
-            ;
+            });
+
+            // Load more lines
+            $('body').on('click', '.load-more-link', function (e) {
+                e.preventDefault();
+                const filePath = $(this).attr('data-file-path');
+                let textArea = $(this).parents('tr').find('textarea').first();
+                let downloadButton = $(this).parents('tr').find('.download-link').first();
+
+                let currentLinesLoaded = downloadButton.data('lines-loaded') || defaultLines;
+                let newLinesToLoad = currentLinesLoaded + defaultLines;
+
+                $.ajax({
+                    url: '<?= $ajaxUrl ?>',
+                    type: 'post',
+                    data: {file_path: filePath, lines: newLinesToLoad},
+                    showLoader: true,
+                    success: function (response) {
+                        textArea.val(response);
+                        textArea.prop('rows', 15);
+                        downloadButton.data('lines-loaded', newLinesToLoad); // Update lines loaded
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error loading more lines: ' + error);
+                        textArea.val('Error: ' + xhr.responseText);
+                    }
+                });
+            });
+
+            // Clear log file
+            $('body').on('click', '.clear-link', function (e) {
+                e.preventDefault();
+                const filePath = $(this).attr('data-file-path');
+                let textArea = $(this).parents('tr').find('textarea').first();
+
+                confirm({
+                    content: $t('Are you sure you want to clear this log file? This action cannot be undone.'),
+                    actions: {
+                        confirm: function () {
+                            $.ajax({
+                                url: '<?= $clearUrl ?>',
+                                type: 'post',
+                                data: {file_path: filePath},
+                                showLoader: true,
+                                success: function (response) {
+                                    if (response.success) {
+                                        textArea.val('');
+                                        textArea.prop('rows', 1);
+                                        alert($t('Log file cleared successfully.'));
+                                    } else {
+                                        alert($t('Error clearing log file: ') + response.message);
+                                    }
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error('Error clearing file: ' + error);
+                                    alert($t('An error occurred while clearing the file.'));
+                                }
+                            });
+                        }
+                    }
+                });
+            });
         });
     });
 </script>
