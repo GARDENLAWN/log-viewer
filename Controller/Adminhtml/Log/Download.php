@@ -80,7 +80,7 @@ class Download extends Action
             $this->messageManager->addErrorMessage($e->getMessage());
             return $this->getResponse()->setBody($e->getMessage()); // Return error message to AJAX
         } catch (\Exception $e) {
-            $this->messageManager->addErrorMessage(__('An error occurred while downloading the file.'));
+            $this->messageManager->addErrorMessage(__('An error occurred while downloading the file: ' . $e->getMessage()));
             return $this->getResponse()->setBody(__('An error occurred while downloading the file.')); // Return error message to AJAX
         }
     }
@@ -93,38 +93,49 @@ class Download extends Action
      * @return string
      * @throws \Magento\Framework\Exception\FileSystemException
      */
-    private function tailFile(string $filepath, int $lines = 100): string
+    private function tailFile(string $filepath, int $lines): string
     {
         $f = $this->file->fileOpen($filepath, 'r');
         if (!$f) {
             return '';
         }
 
-        $buffer = [];
-        $lineCounter = 0;
-        $pos = -1;
+        $stat = $this->file->stat($filepath);
+        $size = $stat['size'];
+        if ($size === 0) {
+            $this->file->fileClose($f);
+            return '';
+        }
 
-        while ($lineCounter < $lines) {
-            if ($this->file->fileSeek($f, $pos, SEEK_END) === -1) {
-                // Reached beginning of file
+        $bufferSize = 4096;
+        $buffer = '';
+        $lineCount = 0;
+        $position = $size;
+
+        while ($position > 0) {
+            $seekPosition = max(0, $position - $bufferSize);
+            $bytesToRead = $position - $seekPosition;
+
+            $this->file->fileSeek($f, $seekPosition);
+            $readBuffer = $this->file->fileRead($f, $bytesToRead);
+            $buffer = $readBuffer . $buffer;
+            $lineCount = substr_count($buffer, "\n");
+
+            if ($lineCount >= $lines) {
                 break;
             }
-            $char = $this->file->fileRead($f, 1);
-            if ($char === "\n") {
-                $lineCounter++;
-            }
-            array_unshift($buffer, $char);
-            $pos--;
+
+            $position = $seekPosition;
         }
+
         $this->file->fileClose($f);
 
-        // Remove partial first line if it's not the beginning of the file
-        if ($lineCounter >= $lines && $buffer[0] !== "\n") {
-            while (count($buffer) > 0 && array_shift($buffer) !== "\n") {
-                // Remove characters until the next newline
-            }
+        if ($lineCount >= $lines) {
+            $bufferLines = explode("\n", $buffer);
+            $tailedLines = array_slice($bufferLines, -$lines);
+            $buffer = implode("\n", $tailedLines);
         }
 
-        return implode('', $buffer);
+        return $buffer;
     }
 }
