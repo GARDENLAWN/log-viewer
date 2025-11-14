@@ -162,7 +162,6 @@ $clearUrl = $block->getClearUrl();
             $('body').on('click', '.clear-link', function (e) {
                 e.preventDefault();
                 const filePath = $(this).attr('data-file-path');
-                let textArea = $(this).parents('tr').find('textarea').first();
 
                 confirm({
                     content: $t('Are you sure you want to clear this log file? This action cannot be undone.'),
@@ -175,9 +174,7 @@ $clearUrl = $block->getClearUrl();
                                 showLoader: true,
                                 success: function (response) {
                                     if (response.success) {
-                                        textArea.val('');
-                                        textArea.prop('rows', 1);
-                                        alert($t('Log file cleared successfully.'));
+                                        location.reload();
                                     } else {
                                         alert($t('Error clearing log file: ') + response.message);
                                     }

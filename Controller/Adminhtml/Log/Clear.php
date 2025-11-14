@@ -7,8 +7,8 @@ use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\App\RequestInterface;
-use Magento\Framework\App\ResponseInterface;
 use Magento\Framework\Controller\Result\JsonFactory;
+use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Filesystem\Driver\File;
 
@@ -58,9 +58,9 @@ class Clear extends Action
     }
 
     /**
-     * @return ResponseInterface
+     * @return ResultInterface
      */
-    public function execute(): ResponseInterface
+    public function execute(): ResultInterface
     {
         $result = $this->resultJsonFactory->create();
         try {
