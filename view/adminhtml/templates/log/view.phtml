@@ -37,7 +37,8 @@ $clearAllUrl = $block->getClearAllUrl();
                     <button type="button" class="action-default download-link" data-file-path="<?= $logFile ?>">
                         <span><?= $block->escapeHtml(__('View Last 100 Lines')) ?></span>
                     </button>
-                    <button type="button" class="action-default load-more-link" data-file-path="<?= $logFile ?>" style="display:none;">
+                    <button type="button" class="action-default load-more-link" data-file-path="<?= $logFile ?>"
+                            style="display:none;">
                         <span><?= $block->escapeHtml(__('Load More')) ?></span>
                     </button>
                     <button type="button" class="action-default clear-link" data-file-path="<?= $logFile ?>">
@@ -78,7 +79,7 @@ $clearAllUrl = $block->getClearAllUrl();
         line-height: 1.42857143;
         vertical-align: top;
         border-right: 1px solid #d1d1d1;
-        word-wrap:break-word;
+        word-wrap: break-word;
     }
 
     .admin__table-th:last-child,
@@ -145,18 +146,26 @@ $clearAllUrl = $block->getClearAllUrl();
     require([
         'jquery',
         'Magento_Ui/js/modal/confirm',
-        'mage/translate'
+        'mage/translate',
+        'mage/cookies'
     ], function ($, confirm, $t) {
         $(document).ready(function () {
             const defaultLines = 100;
 
-            function formatLog(logText) {
-                if (!logText) {
-                    return '';
+            function formatLog(logData) {
+                let logText = logData;
+                if (typeof logData === 'object' && logData !== null && 'content' in logData) {
+                    logText = logData.content;
                 }
+
+                if (typeof logText !== 'string') {
+                    console.error("logText is not a string:", logText);
+                    return '<div class="log-line error">Error: Invalid log format received.</div>';
+                }
+
                 const lines = logText.split('\n');
                 let html = '';
-                lines.forEach(function(line) {
+                lines.forEach(function (line) {
                     if (line.trim() === '') {
                         return;
                     }
@@ -164,12 +173,11 @@ $clearAllUrl = $block->getClearAllUrl();
                     const escapedLine = $('<div>').text(line).html();
                     let processedLine = escapedLine;
 
-                    // Match channel and log level like main.INFO, main.ERROR, etc.
                     const match = line.match(/(\w+)\.(INFO|WARNING|ERROR|CRITICAL|DEBUG|NOTICE|ALERT|EMERGENCY)/);
                     if (match && match[2]) {
                         className = match[2].toLowerCase();
                         if (className === 'critical') {
-                            const fullMatch = match[0]; // e.g., "main.CRITICAL"
+                            const fullMatch = match[0];
                             processedLine = escapedLine.replace(fullMatch, '<strong>' + fullMatch + '</strong>');
                         }
                     }
@@ -186,7 +194,6 @@ $clearAllUrl = $block->getClearAllUrl();
                 let logContainer = $(this).parents('tr').find('.log-container').first();
                 let loadMoreButton = $(this).parents('tr').find('.load-more-link').first();
 
-                // Reset lines loaded for this file
                 $(this).data('lines-loaded', defaultLines);
 
                 $.ajax({
@@ -223,7 +230,7 @@ $clearAllUrl = $block->getClearAllUrl();
                     showLoader: true,
                     success: function (response) {
                         logContainer.html(formatLog(response));
-                        downloadButton.data('lines-loaded', newLinesToLoad); // Update lines loaded
+                        downloadButton.data('lines-loaded', newLinesToLoad);
                     },
                     error: function (xhr, status, error) {
                         console.error('Error loading more lines: ' + error);
@@ -284,6 +291,7 @@ $clearAllUrl = $block->getClearAllUrl();
                                 },
                                 error: function (xhr, status, error) {
                                     console.error('Error clearing files: ' + error);
+                                    console.error(xhr, status, error);
                                     alert($t('An error occurred while clearing the files.'));
                                 }
                             });

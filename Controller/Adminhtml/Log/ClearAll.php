@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GardenLawn\LogViewer\Controller\Adminhtml\Log;
 
+use Exception;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Filesystem\DirectoryList;
@@ -42,7 +43,8 @@ class ClearAll extends Action
         File          $file,
         DirectoryList $directoryList,
         JsonFactory   $resultJsonFactory
-    ) {
+    )
+    {
         parent::__construct($context);
         $this->file = $file;
         $this->directoryList = $directoryList;
@@ -71,7 +73,7 @@ class ClearAll extends Action
         } catch (LocalizedException $e) {
             $this->messageManager->addErrorMessage($e->getMessage());
             return $result->setData(['success' => false, 'message' => $e->getMessage()]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->messageManager->addErrorMessage(__('An error occurred while clearing log files.'));
             return $result->setData(['success' => false, 'message' => __('An error occurred while clearing log files.')]);
         }

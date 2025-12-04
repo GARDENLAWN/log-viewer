@@ -86,7 +86,7 @@ class View extends Template
      */
     public function getClearAllUrl(): string
     {
-        return $this->getUrl('logviewer/log/clearall');
+        return $this->getUrl('logviewer/log/clear_all');
     }
 
     /**
