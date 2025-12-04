@@ -12,13 +12,19 @@ try {
 }
 $ajaxUrl = $block->getAjaxUrl();
 $clearUrl = $block->getClearUrl();
+$clearAllUrl = $block->getClearAllUrl();
 
 ?>
 <table class="admin__table-secondary">
     <thead>
     <tr class="admin__table-row">
         <th style="width: 15%" class="admin__table-th"><?= $block->escapeHtml(__('File Name')) ?></th>
-        <th style="width: 10%" class="admin__table-th"><?= $block->escapeHtml(__('Actions')) ?></th>
+        <th style="width: 10%" class="admin__table-th">
+            <?= $block->escapeHtml(__('Actions')) ?>
+            <button type="button" id="clear-all-logs" class="action-default">
+                <span><?= $block->escapeHtml(__('Clear All')) ?></span>
+            </button>
+        </th>
         <th style="width: 75%" class="admin__table-th"></th>
     </tr>
     </thead>
@@ -182,6 +188,35 @@ $clearUrl = $block->getClearUrl();
                                 error: function (xhr, status, error) {
                                     console.error('Error clearing file: ' + error);
                                     alert($t('An error occurred while clearing the file.'));
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+
+            // Clear all log files
+            $('body').on('click', '#clear-all-logs', function (e) {
+                e.preventDefault();
+
+                confirm({
+                    content: $t('Are you sure you want to clear all log files? This action cannot be undone.'),
+                    actions: {
+                        confirm: function () {
+                            $.ajax({
+                                url: '<?= $clearAllUrl ?>',
+                                type: 'post',
+                                showLoader: true,
+                                success: function (response) {
+                                    if (response.success) {
+                                        location.reload();
+                                    } else {
+                                        alert($t('Error clearing log files: ') + response.message);
+                                    }
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error('Error clearing files: ' + error);
+                                    alert($t('An error occurred while clearing the files.'));
                                 }
                             });
                         }

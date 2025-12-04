@@ -82,6 +82,14 @@ class View extends Template
     }
 
     /**
+     * @return string
+     */
+    public function getClearAllUrl(): string
+    {
+        return $this->getUrl('logviewer/log/clearall');
+    }
+
+    /**
      * @param string $directory
      * @param array $logFiles
      *
