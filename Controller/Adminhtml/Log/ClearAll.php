@@ -14,7 +14,7 @@ use Magento\Framework\Filesystem\Glob;
 
 class ClearAll extends Action
 {
-    public const string ADMIN_RESOURCE = 'GardenLawn_LogViewer::clear';
+    public const string ADMIN_RESOURCE = 'GardenLawn_LogViewer::clear_all';
 
     /**
      * @var File
@@ -60,7 +60,9 @@ class ClearAll extends Action
             $files = Glob::glob($logDirectory . '/*.log');
 
             foreach ($files as $filePath) {
-                $this->file->filePutContents($filePath, '');
+                if (is_file($filePath)) {
+                    $this->file->filePutContents($filePath, '');
+                }
             }
 
             $this->messageManager->addSuccessMessage(__('All log files have been cleared.'));
@@ -70,8 +72,8 @@ class ClearAll extends Action
             $this->messageManager->addErrorMessage($e->getMessage());
             return $result->setData(['success' => false, 'message' => $e->getMessage()]);
         } catch (\Exception $e) {
-            $this->messageManager->addErrorMessage(__('An error occurred while clearing the log files.'));
-            return $result->setData(['success' => false, 'message' => __('An error occurred while clearing the log files.')]);
+            $this->messageManager->addErrorMessage(__('An error occurred while clearing log files.'));
+            return $result->setData(['success' => false, 'message' => __('An error occurred while clearing log files.')]);
         }
     }
 }

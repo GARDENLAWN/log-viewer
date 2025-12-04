@@ -45,9 +45,7 @@ $clearAllUrl = $block->getClearAllUrl();
                     </button>
                 </td>
                 <td class="admin__table-td">
-                    <label>
-                        <textarea rows="1" style="width: 100%; min-height: 100px;"></textarea>
-                    </label>
+                    <div class="log-container"></div>
                 </td>
             </tr>
         <?php endforeach; ?>
@@ -98,6 +96,36 @@ $clearAllUrl = $block->getClearAllUrl();
         background-color: #fff;
         color: #333;
     }
+
+    .log-container {
+        background-color: #f5f5f5;
+        border: 1px solid #ccc;
+        padding: 10px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: monospace;
+        white-space: pre-wrap;
+    }
+
+    .log-line {
+        padding: 2px 5px;
+        border-radius: 3px;
+    }
+
+    .log-line.info {
+        background-color: #d9edf7;
+        color: #31708f;
+    }
+
+    .log-line.warning {
+        background-color: #fcf8e3;
+        color: #8a6d3b;
+    }
+
+    .log-line.error {
+        background-color: #f2dede;
+        color: #a94442;
+    }
 </style>
 
 <script>
@@ -109,11 +137,28 @@ $clearAllUrl = $block->getClearAllUrl();
         $(document).ready(function () {
             const defaultLines = 100;
 
+            function formatLog(logText) {
+                const lines = logText.split('\\n');
+                let html = '';
+                lines.forEach(function(line) {
+                    let className = '';
+                    if (line.includes('INFO')) {
+                        className = 'info';
+                    } else if (line.includes('WARNING')) {
+                        className = 'warning';
+                    } else if (line.includes('ERROR')) {
+                        className = 'error';
+                    }
+                    html += '<div class="log-line ' + className + '">' + line + '</div>';
+                });
+                return html;
+            }
+
             // Trigger file download via AJAX
             $('body').on('click', '.download-link', function (e) {
                 e.preventDefault();
                 const filePath = $(this).attr('data-file-path');
-                let textArea = $(this).parents('tr').find('textarea').first();
+                let logContainer = $(this).parents('tr').find('.log-container').first();
                 let loadMoreButton = $(this).parents('tr').find('.load-more-link').first();
 
                 // Reset lines loaded for this file
@@ -125,13 +170,12 @@ $clearAllUrl = $block->getClearAllUrl();
                     data: {file_path: filePath, lines: defaultLines},
                     showLoader: true,
                     success: function (response) {
-                        textArea.val(response);
-                        textArea.prop('rows', 15);
+                        logContainer.html(formatLog(response));
                         loadMoreButton.show();
                     },
                     error: function (xhr, status, error) {
                         console.error('Error downloading file: ' + error);
-                        textArea.val('Error: ' + xhr.responseText);
+                        logContainer.html('Error: ' + xhr.responseText);
                         loadMoreButton.hide();
                     }
                 });
@@ -141,7 +185,7 @@ $clearAllUrl = $block->getClearAllUrl();
             $('body').on('click', '.load-more-link', function (e) {
                 e.preventDefault();
                 const filePath = $(this).attr('data-file-path');
-                let textArea = $(this).parents('tr').find('textarea').first();
+                let logContainer = $(this).parents('tr').find('.log-container').first();
                 let downloadButton = $(this).parents('tr').find('.download-link').first();
 
                 let currentLinesLoaded = downloadButton.data('lines-loaded') || defaultLines;
@@ -153,13 +197,12 @@ $clearAllUrl = $block->getClearAllUrl();
                     data: {file_path: filePath, lines: newLinesToLoad},
                     showLoader: true,
                     success: function (response) {
-                        textArea.val(response);
-                        textArea.prop('rows', 15);
+                        logContainer.html(formatLog(response));
                         downloadButton.data('lines-loaded', newLinesToLoad); // Update lines loaded
                     },
                     error: function (xhr, status, error) {
                         console.error('Error loading more lines: ' + error);
-                        textArea.val('Error: ' + xhr.responseText);
+                        logContainer.html('Error: ' + xhr.responseText);
                     }
                 });
             });
