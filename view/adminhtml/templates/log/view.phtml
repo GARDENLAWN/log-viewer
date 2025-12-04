@@ -98,33 +98,36 @@ $clearAllUrl = $block->getClearAllUrl();
     }
 
     .log-container {
-        background-color: #f5f5f5;
+        background-color: #2b2b2b; /* Dark background for better contrast */
+        color: #f2f2f2;
         border: 1px solid #ccc;
         padding: 10px;
         max-height: 400px;
         overflow-y: auto;
         font-family: monospace;
         white-space: pre-wrap;
+        font-size: 13px;
     }
 
     .log-line {
         padding: 2px 5px;
         border-radius: 3px;
+        margin-bottom: 2px; /* Space between lines */
     }
 
-    .log-line.info {
-        background-color: #d9edf7;
-        color: #31708f;
+    .log-line.info, .log-line.debug {
+        background-color: #334; /* Dark blue */
+        color: #9cc5e5;
     }
 
-    .log-line.warning {
-        background-color: #fcf8e3;
-        color: #8a6d3b;
+    .log-line.warning, .log-line.notice {
+        background-color: #544; /* Dark yellow/brown */
+        color: #f0e68c;
     }
 
-    .log-line.error {
-        background-color: #f2dede;
-        color: #a94442;
+    .log-line.error, .log-line.critical, .log-line.alert, .log-line.emergency {
+        background-color: #533; /* Dark red */
+        color: #ff9999;
     }
 </style>
 
@@ -138,18 +141,26 @@ $clearAllUrl = $block->getClearAllUrl();
             const defaultLines = 100;
 
             function formatLog(logText) {
-                const lines = logText.split('\\n');
+                if (!logText) {
+                    return '';
+                }
+                const lines = logText.split('\n'); // Correctly split by newline character
                 let html = '';
                 lines.forEach(function(line) {
-                    let className = '';
-                    if (line.includes('INFO')) {
-                        className = 'info';
-                    } else if (line.includes('WARNING')) {
-                        className = 'warning';
-                    } else if (line.includes('ERROR')) {
-                        className = 'error';
+                    if (line.trim() === '') {
+                        return;
                     }
-                    html += '<div class="log-line ' + className + '">' + line + '</div>';
+                    let className = '';
+                    // Match log level like main.INFO, main.ERROR, etc.
+                    const match = line.match(/\.(INFO|WARNING|ERROR|CRITICAL|DEBUG|NOTICE|ALERT|EMERGENCY):/);
+                    if (match && match[1]) {
+                        className = match[1].toLowerCase();
+                    }
+
+                    // Escape HTML to prevent XSS
+                    const escapedLine = $('<div>').text(line).html();
+
+                    html += '<div class="log-line ' + className + '">' + escapedLine + '</div>';
                 });
                 return html;
             }
