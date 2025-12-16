@@ -270,7 +270,7 @@ $formKey = $block->getFormKey();
                 });
             });
 
-            // Clear all log files (Iterative approach)
+            // Clear all log files (Sequential approach)
             $('body').on('click', '#clear-all-logs', function (e) {
                 e.preventDefault();
 
@@ -294,11 +294,23 @@ $formKey = $block->getFormKey();
                         confirm: function () {
                             $('body').trigger('processStart'); // Start global loader
 
-                            var totalFiles = filesToClear.length;
-                            var processedCount = 0;
                             var errors = [];
 
-                            filesToClear.forEach(function(filePath) {
+                            // Function to process files one by one
+                            function processNextFile() {
+                                if (filesToClear.length === 0) {
+                                    // All files processed
+                                    $('body').trigger('processStop');
+
+                                    if (errors.length > 0) {
+                                        console.error('Errors occurred while clearing some files:', errors);
+                                    }
+                                    location.reload();
+                                    return;
+                                }
+
+                                var filePath = filesToClear.shift(); // Get and remove the first file from the queue
+
                                 $.ajax({
                                     url: '<?= $clearUrl ?>',
                                     type: 'post',
@@ -306,7 +318,7 @@ $formKey = $block->getFormKey();
                                         file_path: filePath,
                                         form_key: formKey
                                     },
-                                    // Don't use showLoader: true here to avoid flickering or multiple spinners
+                                    // No individual loader, we use the global one
                                     success: function (response) {
                                         if (!response.success) {
                                             errors.push(filePath + ': ' + response.message);
@@ -316,20 +328,14 @@ $formKey = $block->getFormKey();
                                         errors.push(filePath + ': ' + error);
                                     },
                                     complete: function () {
-                                        processedCount++;
-                                        // Check if all requests are finished
-                                        if (processedCount === totalFiles) {
-                                            $('body').trigger('processStop'); // Stop global loader
-
-                                            if (errors.length > 0) {
-                                                console.error('Errors occurred while clearing some files:', errors);
-                                                // Optional: alert user about errors, but reloading is usually enough
-                                            }
-                                            location.reload();
-                                        }
+                                        // Recursively call to process the next file
+                                        processNextFile();
                                     }
                                 });
-                            });
+                            }
+
+                            // Start processing
+                            processNextFile();
                         }
                     }
                 });
