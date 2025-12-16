@@ -12,6 +12,7 @@ try {
 }
 $ajaxUrl = $block->getAjaxUrl();
 $clearUrl = $block->getClearUrl();
+$formKey = $block->getFormKey();
 
 ?>
 <table class="admin__table-secondary">
@@ -145,11 +146,11 @@ $clearUrl = $block->getClearUrl();
     require([
         'jquery',
         'Magento_Ui/js/modal/confirm',
-        'mage/translate',
-        'mage/cookies'
+        'mage/translate'
     ], function ($, confirm, $t) {
         $(document).ready(function () {
             const defaultLines = 100;
+            const formKey = '<?= $formKey ?>';
 
             function formatLog(logData) {
                 let logText = logData;
@@ -198,7 +199,7 @@ $clearUrl = $block->getClearUrl();
                 $.ajax({
                     url: '<?= $ajaxUrl ?>',
                     type: 'post',
-                    data: {file_path: filePath, lines: defaultLines, form_key: $.mage.cookies.get('form_key')},
+                    data: {file_path: filePath, lines: defaultLines, form_key: formKey},
                     showLoader: true,
                     success: function (response) {
                         logContainer.html(formatLog(response));
@@ -225,7 +226,7 @@ $clearUrl = $block->getClearUrl();
                 $.ajax({
                     url: '<?= $ajaxUrl ?>',
                     type: 'post',
-                    data: {file_path: filePath, lines: newLinesToLoad, form_key: $.mage.cookies.get('form_key')},
+                    data: {file_path: filePath, lines: newLinesToLoad, form_key: formKey},
                     showLoader: true,
                     success: function (response) {
                         logContainer.html(formatLog(response));
@@ -250,7 +251,7 @@ $clearUrl = $block->getClearUrl();
                             $.ajax({
                                 url: '<?= $clearUrl ?>',
                                 type: 'post',
-                                data: {file_path: filePath, form_key: $.mage.cookies.get('form_key')},
+                                data: {file_path: filePath, form_key: formKey},
                                 showLoader: true,
                                 success: function (response) {
                                     if (response.success) {
@@ -303,7 +304,7 @@ $clearUrl = $block->getClearUrl();
                                     type: 'post',
                                     data: {
                                         file_path: filePath,
-                                        form_key: $.mage.cookies.get('form_key')
+                                        form_key: formKey
                                     },
                                     // Don't use showLoader: true here to avoid flickering or multiple spinners
                                     success: function (response) {

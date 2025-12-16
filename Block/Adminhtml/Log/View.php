@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GardenLawn\LogViewer\Block\Adminhtml\Log;
 
 use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Framework\Data\Form\FormKey;
 use Magento\Framework\Exception\FileSystemException;
 use Magento\Framework\Filesystem\Driver\File;
 use Magento\Framework\View\Element\Template;
@@ -21,20 +22,28 @@ class View extends Template
     private File $fileDriver;
 
     /**
+     * @var FormKey
+     */
+    private FormKey $formKey;
+
+    /**
      * @param Template\Context $context
      * @param DirectoryList $directoryList
      * @param File $fileDriver
+     * @param FormKey $formKey
      * @param array $data
      */
     public function __construct(
         Template\Context $context,
         DirectoryList    $directoryList,
         File             $fileDriver,
+        FormKey          $formKey,
         array            $data = []
     ) {
         parent::__construct($context, $data);
         $this->directoryList = $directoryList;
         $this->fileDriver = $fileDriver;
+        $this->formKey = $formKey;
     }
 
     /**
@@ -79,6 +88,16 @@ class View extends Template
     public function getClearUrl(): string
     {
         return $this->getUrl('logviewer/log/clear');
+    }
+
+    /**
+     * Get current form key
+     *
+     * @return string
+     */
+    public function getFormKey(): string
+    {
+        return $this->formKey->getFormKey();
     }
 
     /**
