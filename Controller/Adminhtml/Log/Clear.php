@@ -5,14 +5,14 @@ namespace GardenLawn\LogViewer\Controller\Adminhtml\Log;
 
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
+use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\App\Filesystem\DirectoryList;
-use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Filesystem\Driver\File;
 
-class Clear extends Action
+class Clear extends Action implements HttpPostActionInterface
 {
     public const string ADMIN_RESOURCE = 'GardenLawn_LogViewer::clear';
 
@@ -20,11 +20,6 @@ class Clear extends Action
      * @var File
      */
     private File $file;
-
-    /**
-     * @var RequestInterface
-     */
-    private RequestInterface $request;
 
     /**
      * @var DirectoryList
@@ -38,20 +33,17 @@ class Clear extends Action
 
     /**
      * @param Context $context
-     * @param RequestInterface $request
      * @param File $file
      * @param DirectoryList $directoryList
      * @param JsonFactory $resultJsonFactory
      */
     public function __construct(
-        Context          $context,
-        RequestInterface $request,
-        File             $file,
-        DirectoryList    $directoryList,
-        JsonFactory      $resultJsonFactory
+        Context       $context,
+        File          $file,
+        DirectoryList $directoryList,
+        JsonFactory   $resultJsonFactory
     ) {
         parent::__construct($context);
-        $this->request = $request;
         $this->file = $file;
         $this->directoryList = $directoryList;
         $this->resultJsonFactory = $resultJsonFactory;
@@ -64,7 +56,7 @@ class Clear extends Action
     {
         $result = $this->resultJsonFactory->create();
         try {
-            $filePath = $this->request->getPost('file_path');
+            $filePath = $this->getRequest()->getPost('file_path');
 
             if (!$filePath) {
                 throw new LocalizedException(__('File path is missing.'));

@@ -6,13 +6,13 @@ namespace GardenLawn\LogViewer\Controller\Adminhtml\Log;
 use Laminas\Http\Response;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
+use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\App\Filesystem\DirectoryList;
-use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\ResponseInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Filesystem\Driver\File;
 
-class Download extends Action
+class Download extends Action implements HttpPostActionInterface
 {
     public const string ADMIN_RESOURCE = 'GardenLawn_LogViewer::download';
 
@@ -22,29 +22,21 @@ class Download extends Action
     private File $file;
 
     /**
-     * @var RequestInterface
-     */
-    private RequestInterface $request;
-
-    /**
      * @var DirectoryList
      */
     private DirectoryList $directoryList;
 
     /**
      * @param Context $context
-     * @param RequestInterface $request
      * @param File $file
      * @param DirectoryList $directoryList
      */
     public function __construct(
-        Context          $context,
-        RequestInterface $request,
-        File             $file,
-        DirectoryList    $directoryList
+        Context       $context,
+        File          $file,
+        DirectoryList $directoryList
     ) {
         parent::__construct($context);
-        $this->request = $request;
         $this->file = $file;
         $this->directoryList = $directoryList;
     }
@@ -55,8 +47,8 @@ class Download extends Action
     public function execute(): ResponseInterface
     {
         try {
-            $filePath = $this->request->getPost('file_path');
-            $lines = (int) $this->request->getPost('lines', 100); // Default to 100 lines
+            $filePath = $this->getRequest()->getPost('file_path');
+            $lines = (int)$this->getRequest()->getPost('lines', 100); // Default to 100 lines
 
             if (!$filePath) {
                 throw new LocalizedException(__('File path is missing.'));
@@ -77,11 +69,13 @@ class Download extends Action
                 ->setBody($content);
 
         } catch (LocalizedException $e) {
-            $this->messageManager->addErrorMessage($e->getMessage());
-            return $this->getResponse()->setBody($e->getMessage()); // Return error message to AJAX
+            return $this->getResponse()
+                ->setHttpResponseCode(Response::STATUS_CODE_400)
+                ->setBody($e->getMessage());
         } catch (\Exception $e) {
-            $this->messageManager->addErrorMessage(__('An error occurred while downloading the file: ' . $e->getMessage()));
-            return $this->getResponse()->setBody(__('An error occurred while downloading the file.')); // Return error message to AJAX
+            return $this->getResponse()
+                ->setHttpResponseCode(Response::STATUS_CODE_500)
+                ->setBody(__('An error occurred while downloading the file.'));
         }
     }
 
