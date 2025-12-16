@@ -12,7 +12,6 @@ try {
 }
 $ajaxUrl = $block->getAjaxUrl();
 $clearUrl = $block->getClearUrl();
-$clearAllUrl = $block->getClearAllUrl();
 
 ?>
 <table class="admin__table-secondary">
@@ -199,7 +198,7 @@ $clearAllUrl = $block->getClearAllUrl();
                 $.ajax({
                     url: '<?= $ajaxUrl ?>',
                     type: 'post',
-                    data: {file_path: filePath, lines: defaultLines},
+                    data: {file_path: filePath, lines: defaultLines, form_key: $.mage.cookies.get('form_key')},
                     showLoader: true,
                     success: function (response) {
                         logContainer.html(formatLog(response));
@@ -226,7 +225,7 @@ $clearAllUrl = $block->getClearAllUrl();
                 $.ajax({
                     url: '<?= $ajaxUrl ?>',
                     type: 'post',
-                    data: {file_path: filePath, lines: newLinesToLoad},
+                    data: {file_path: filePath, lines: newLinesToLoad, form_key: $.mage.cookies.get('form_key')},
                     showLoader: true,
                     success: function (response) {
                         logContainer.html(formatLog(response));
@@ -251,7 +250,7 @@ $clearAllUrl = $block->getClearAllUrl();
                             $.ajax({
                                 url: '<?= $clearUrl ?>',
                                 type: 'post',
-                                data: {file_path: filePath},
+                                data: {file_path: filePath, form_key: $.mage.cookies.get('form_key')},
                                 showLoader: true,
                                 success: function (response) {
                                     if (response.success) {
@@ -270,30 +269,65 @@ $clearAllUrl = $block->getClearAllUrl();
                 });
             });
 
-            // Clear all log files
+            // Clear all log files (Iterative approach)
             $('body').on('click', '#clear-all-logs', function (e) {
                 e.preventDefault();
+
+                // Collect all file paths from the DOM
+                var filesToClear = [];
+                $('.clear-link').each(function() {
+                    var path = $(this).attr('data-file-path');
+                    if (path) {
+                        filesToClear.push(path);
+                    }
+                });
+
+                if (filesToClear.length === 0) {
+                    alert($t('No log files found to clear.'));
+                    return;
+                }
 
                 confirm({
                     content: $t('Are you sure you want to clear all log files? This action cannot be undone.'),
                     actions: {
                         confirm: function () {
-                            $.ajax({
-                                url: '<?= $clearAllUrl ?>',
-                                type: 'post',
-                                showLoader: true,
-                                success: function (response) {
-                                    if (response.success) {
-                                        location.reload();
-                                    } else {
-                                        alert($t('Error clearing log files: ') + response.message);
+                            $('body').trigger('processStart'); // Start global loader
+
+                            var totalFiles = filesToClear.length;
+                            var processedCount = 0;
+                            var errors = [];
+
+                            filesToClear.forEach(function(filePath) {
+                                $.ajax({
+                                    url: '<?= $clearUrl ?>',
+                                    type: 'post',
+                                    data: {
+                                        file_path: filePath,
+                                        form_key: $.mage.cookies.get('form_key')
+                                    },
+                                    // Don't use showLoader: true here to avoid flickering or multiple spinners
+                                    success: function (response) {
+                                        if (!response.success) {
+                                            errors.push(filePath + ': ' + response.message);
+                                        }
+                                    },
+                                    error: function (xhr, status, error) {
+                                        errors.push(filePath + ': ' + error);
+                                    },
+                                    complete: function () {
+                                        processedCount++;
+                                        // Check if all requests are finished
+                                        if (processedCount === totalFiles) {
+                                            $('body').trigger('processStop'); // Stop global loader
+
+                                            if (errors.length > 0) {
+                                                console.error('Errors occurred while clearing some files:', errors);
+                                                // Optional: alert user about errors, but reloading is usually enough
+                                            }
+                                            location.reload();
+                                        }
                                     }
-                                },
-                                error: function (xhr, status, error) {
-                                    console.error('Error clearing files: ' + error);
-                                    console.error(xhr, status, error);
-                                    alert($t('An error occurred while clearing the files.'));
-                                }
+                                });
                             });
                         }
                     }
