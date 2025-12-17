@@ -340,6 +340,11 @@ $formKey = $block->getFormKey();
                     }
                 });
             });
+
+            // Automatically load logs on page load
+            $('.download-link').each(function() {
+                $(this).trigger('click');
+            });
         });
     });
 </script>
