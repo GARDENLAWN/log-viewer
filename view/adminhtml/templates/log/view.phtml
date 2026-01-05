@@ -169,6 +169,27 @@ $formKey = $block->getFormKey();
                     if (line.trim() === '') {
                         return;
                     }
+
+                    // Convert UTC timestamp to Local Time
+                    // Updated regex to handle microseconds and timezone offset
+                    line = line.replace(/^\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[+-]\d{2}:\d{2}|Z)?)\]/, function(match, p1) {
+                        try {
+                            const utcDate = new Date(p1);
+                            if (isNaN(utcDate.getTime())) return match;
+
+                            const year = utcDate.getFullYear();
+                            const month = String(utcDate.getMonth() + 1).padStart(2, '0');
+                            const day = String(utcDate.getDate()).padStart(2, '0');
+                            const hours = String(utcDate.getHours()).padStart(2, '0');
+                            const minutes = String(utcDate.getMinutes()).padStart(2, '0');
+                            const seconds = String(utcDate.getSeconds()).padStart(2, '0');
+
+                            return `[${year}-${month}-${day} ${hours}:${minutes}:${seconds}]`;
+                        } catch (e) {
+                            return match;
+                        }
+                    });
+
                     let className = '';
                     const escapedLine = $('<div>').text(line).html();
                     let processedLine = escapedLine;
