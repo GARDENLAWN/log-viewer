@@ -34,12 +34,15 @@ $formKey = $block->getFormKey();
             <tr class="admin__table-row">
                 <td class="admin__table-td"><?= $block->escapeHtml($this->getHumanName($logFile)) ?></td>
                 <td class="admin__table-td">
-                    <button type="button" class="action-default download-link" data-file-path="<?= $logFile ?>">
-                        <span><?= $block->escapeHtml(__('View Last 100 Lines')) ?></span>
+                    <button type="button" class="action-default download-link" data-file-path="<?= $logFile ?>" data-lines="5">
+                        <span><?= $block->escapeHtml(__('View Last 5 Lines')) ?></span>
+                    </button>
+                    <button type="button" class="action-default download-link" data-file-path="<?= $logFile ?>" data-lines="10">
+                        <span><?= $block->escapeHtml(__('View Last 10 Lines')) ?></span>
                     </button>
                     <button type="button" class="action-default load-more-link" data-file-path="<?= $logFile ?>"
                             style="display:none;">
-                        <span><?= $block->escapeHtml(__('Load More')) ?></span>
+                        <span><?= $block->escapeHtml(__('Load All')) ?></span>
                     </button>
                     <button type="button" class="action-default clear-link" data-file-path="<?= $logFile ?>">
                         <span><?= $block->escapeHtml(__('Clear')) ?></span>
@@ -149,7 +152,7 @@ $formKey = $block->getFormKey();
         'mage/translate'
     ], function ($, confirm, $t) {
         $(document).ready(function () {
-            const defaultLines = 100;
+            const defaultLines = 5;
             const formKey = '<?= $formKey ?>';
 
             function formatLog(logData) {
@@ -208,30 +211,40 @@ $formKey = $block->getFormKey();
                 return html;
             }
 
-            // Trigger file download via AJAX
-            $('body').on('click', '.download-link', function (e) {
-                e.preventDefault();
-                const filePath = $(this).attr('data-file-path');
-                let logContainer = $(this).parents('tr').find('.log-container').first();
-                let loadMoreButton = $(this).parents('tr').find('.load-more-link').first();
+            function fetchLog(element, showLoader, callback) {
+                const $element = $(element);
+                const filePath = $element.attr('data-file-path');
+                // Use data-lines attribute if available, otherwise defaultLines
+                const linesToLoad = $element.attr('data-lines') || defaultLines;
 
-                $(this).data('lines-loaded', defaultLines);
+                let logContainer = $element.parents('tr').find('.log-container').first();
+                let loadMoreButton = $element.parents('tr').find('.load-more-link').first();
+
+                $element.data('lines-loaded', linesToLoad);
 
                 $.ajax({
                     url: '<?= $ajaxUrl ?>',
                     type: 'post',
-                    data: {file_path: filePath, lines: defaultLines, form_key: formKey},
-                    showLoader: true,
+                    data: {file_path: filePath, lines: linesToLoad, form_key: formKey},
+                    showLoader: showLoader,
                     success: function (response) {
                         logContainer.html(formatLog(response));
                         loadMoreButton.show();
+                        if (callback) callback();
                     },
                     error: function (xhr, status, error) {
                         console.error('Error downloading file: ' + error);
                         logContainer.html('Error: ' + xhr.responseText);
                         loadMoreButton.hide();
+                        if (callback) callback();
                     }
                 });
+            }
+
+            // Trigger file download via AJAX (Manual click)
+            $('body').on('click', '.download-link', function (e) {
+                e.preventDefault();
+                fetchLog(this, true);
             });
 
             // Load more lines
@@ -240,9 +253,11 @@ $formKey = $block->getFormKey();
                 const filePath = $(this).attr('data-file-path');
                 let logContainer = $(this).parents('tr').find('.log-container').first();
                 let downloadButton = $(this).parents('tr').find('.download-link').first();
+                let loadMoreBtn = $(this); // Capture the button element
 
-                let currentLinesLoaded = downloadButton.data('lines-loaded') || defaultLines;
-                let newLinesToLoad = currentLinesLoaded + defaultLines;
+                // Request a very large number to load "all" lines
+                // PHP int max is usually sufficient
+                let newLinesToLoad = 1000000;
 
                 $.ajax({
                     url: '<?= $ajaxUrl ?>',
@@ -252,6 +267,8 @@ $formKey = $block->getFormKey();
                     success: function (response) {
                         logContainer.html(formatLog(response));
                         downloadButton.data('lines-loaded', newLinesToLoad);
+                        // Hide the button completely
+                        loadMoreBtn.hide();
                     },
                     error: function (xhr, status, error) {
                         console.error('Error loading more lines: ' + error);
@@ -362,10 +379,15 @@ $formKey = $block->getFormKey();
                 });
             });
 
-            // Automatically load logs on page load
-            $('.download-link').each(function() {
-                $(this).trigger('click');
-            });
+            // Automatically load logs on page load (Sequential)
+            // Only select the "View Last 5 Lines" buttons for auto-loading
+            var downloadLinks = $('.download-link[data-lines="5"]').toArray();
+            function processNextLog() {
+                if (downloadLinks.length === 0) return;
+                var link = downloadLinks.shift();
+                fetchLog(link, false, processNextLog);
+            }
+            processNextLog();
         });
     });
 </script>
