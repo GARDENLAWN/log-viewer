@@ -157,8 +157,20 @@ $formKey = $block->getFormKey();
 
             function formatLog(logData) {
                 let logText = logData;
-                if (typeof logData === 'object' && logData !== null && 'content' in logData) {
-                    logText = logData.content;
+                // Handle JSON object response if jQuery parses it automatically
+                if (typeof logData === 'object' && logData !== null) {
+                     if ('content' in logData) {
+                        logText = logData.content;
+                     } else if ('body' in logData) { // Sometimes body is used
+                        logText = logData.body;
+                     } else {
+                        // Fallback: try to stringify if it's an unknown object
+                        try {
+                            logText = JSON.stringify(logData, null, 2);
+                        } catch (e) {
+                            logText = "Error: Could not parse log object.";
+                        }
+                     }
                 }
 
                 if (typeof logText !== 'string') {
